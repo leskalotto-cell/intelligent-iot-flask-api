@@ -1,0 +1,10 @@
+version: "3.9"
+
+# Remote deployment – puller færdigt image fra ghcr.io, bygger ikke lokalt
+services:
+  api:
+    image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}   # Puller fra ghcr.io
+
+  db:
+    ports:
+      - "${DB_EXTERNAL_PORT:-3307}:3306"

@@ -2,28 +2,37 @@ version: "3.9"
 
 services:
   db:
-    image: mysql:8.0
-    container_name: iot_mysql
+    image: mysql:${MYSQL_VERSION:-8.0}
+    container_name: ${COMPOSE_PROJECT_NAME:-iot}_mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: flask_demo
-    ports:
-      - "3307:3306"   # 3307 på værtsmaskinen -> 3306 i containeren
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
     volumes:
       - db_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   api:
-    build: .
-    container_name: iot_flask_api
+    image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: ${COMPOSE_PROJECT_NAME:-iot}_api
     restart: always
-    env_file:
-      - .env
+    environment:
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "5005:5000"
+      - "${API_EXTERNAL_PORT:-5005}:5000"
 
 volumes:
   db_data:

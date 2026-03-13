@@ -1,17 +1,27 @@
 FROM python:3.11-slim
 
-# Arbejdsmappe i containeren
 WORKDIR /app
 
-# Kopiér requirements og installér
+# Installer curl til healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Afhængigheder i eget lag så Docker kan cache dem
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Kopiér resten af koden
+# Kopiér kildekode
 COPY . .
 
-# Flask skal kunne lytte på port 5000
+# Kør ikke som root
+RUN adduser --disabled-password --gecos "" appuser
+USER appuser
+
+# Health endpoint bruges af Docker og Azure til at tjekke om appen kører
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
 EXPOSE 5000
 
-# Kør appen
-CMD ["python", "app.py"]
+# gunicorn er mere stabil end Flask's dev-server i produktion
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]
