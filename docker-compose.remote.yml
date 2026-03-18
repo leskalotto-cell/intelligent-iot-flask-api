@@ -6,4 +6,5 @@ services:
     image: ${IMAGE_NAME}:${IMAGE_TAG:-latest}   # Puller fra ghcr.io
 
   db:
-     ports: []   # Database er IKKE eksponeret eksternt – kun API er tilgængeligt
+     ports:
+      - "127.0.0.1:3306:3306"   # Kun tilgængelig lokalt på remote VM – ikke udefra
